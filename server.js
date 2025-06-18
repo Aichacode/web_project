@@ -208,7 +208,7 @@ app.get('/api/dentists', async (req, res) => {
 
     try {
         const { data: dentists, error } = await supabase
-            .from('doctors')
+            .from('dentists')
             .select('doctor_id, name')
             .eq('department_id', department)
             .order('name', { ascending: true });
