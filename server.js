@@ -4,14 +4,14 @@ const cors = require('cors');
 const path = require('path');
 const supabase = require('./supabase');
 const { sendAppointmentConfirmation } = require('./emailconfig');
-const bcrypt = require('bcrypt');
+//const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Secret key for JWT - in production, use environment variable
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
+const JWT_SECRET = process.env.JWT_SECRET || 'wy4Wy3RnuIy1BOQetL8Gty4WO7yAA3XYV3DWmA4GJyvtQFzJoCGdjZCCG2y7HMXQwSAhIzRxYMR7aWduc3IbIQ==';
 
 // Middleware
 app.use(cors());
@@ -38,7 +38,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// API Routes
+// dentist login
 app.post('/api/dentist-login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -109,7 +109,7 @@ app.post('/api/dentist-login', async (req, res) => {
     }
 });
 
-// API endpoint to get appointments with filters
+// get appointments with filters
 app.get('/api/appointments', authenticateToken, async (req, res) => {
     const { department, date, dateFilter } = req.query;
     
@@ -197,7 +197,7 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
     }
 });
 
-// API endpoint to get dentists by department
+// get dentists by department
 app.get('/api/dentists', async (req, res) => {
     const { department } = req.query;
     
@@ -240,37 +240,22 @@ app.post('/submit-appointment', async (req, res) => {
         time
     } = req.body;
 
-    // Debug logging
-    console.log('Full request body:', req.body);
-    console.log('Dentist value received:', dentist);
-    console.log('Department value received:', department);
+    console.log('Appointment submission received:', { name, email, dentist, department, date, time });
 
-    // Validate dentist ID
-    if (!dentist) {
-        console.error('Dentist ID is missing or invalid:', dentist);
-        res.json({ success: false, error: 'Dentist selection is required.' });
+    // Validate required fields
+    if (!name || !email || !phone || !dentist || !department || !date || !time) {
+        console.error('Missing required fields');
+        res.status(400).json({ success: false, error: 'All fields are required' });
         return;
     }
 
     try {
-        // First, let's check what doctors we have in the database
-        const { data: allDoctors, error: doctorsError } = await supabase
-            .from('doctors')
-            .select('*')
-            .eq('doctor_id', dentist);
-
-        if (doctorsError) {
-            console.error('Error fetching doctors:', doctorsError);
-        } else {
-            console.log('Current doctors in database:', allDoctors);
-        }
-
-        // First, insert the patient
+        // insert the patient first
         const { data: patientData, error: patientError } = await supabase
             .from('patients')
             .insert([{
                 name: name,
-                address: address,
+                address: address || '',
                 email: email,
                 phone: phone
             }])
@@ -278,13 +263,14 @@ app.post('/submit-appointment', async (req, res) => {
 
         if (patientError) {
             console.error('Error saving patient:', patientError);
-            res.json({ success: false, error: 'Failed to save patient information' });
+            res.status(500).json({ success: false, error: 'Failed to save patient information' });
             return;
         }
 
         const patientId = patientData[0].id;
+        console.log('Patient saved with ID:', patientId);
 
-        // Get the doctor's ID and name
+        // Get the doctor's information
         const { data: doctorData, error: doctorError } = await supabase
             .from('doctors')
             .select(`
@@ -298,22 +284,22 @@ app.post('/submit-appointment', async (req, res) => {
 
         if (doctorError) {
             console.error('Error finding doctor:', doctorError);
-            res.json({ success: false, error: 'Failed to find doctor' });
+             res.status(500).json({ success: false, error: 'Failed to find doctor' });
             return;
         }
         
         if (!doctorData || doctorData.length === 0) {
             console.error('No doctor found with ID:', dentist);
-            res.json({ success: false, error: `Doctor with ID ${dentist} not found in database` });
+            res.status(404).json({ success: false, error: `Doctor with ID ${dentist} not found` });
             return;
         }
 
         const doctorId = doctorData[0].doctor_id;
         const doctorName = doctorData[0].name;
         const departmentName = doctorData[0].departments.name;
-        console.log('Found doctor ID:', doctorId);
+         console.log('Found doctor:', doctorName, 'in department:', departmentName);
 
-        // Then, insert the appointment
+        // insert the appointment
         const { data: appointmentData, error: appointmentError } = await supabase
             .from('appointments')
             .insert([{
@@ -322,29 +308,30 @@ app.post('/submit-appointment', async (req, res) => {
                 doctor_id: doctorId,
                 appointment_date: date,
                 time_slot: time,
-                problem: problem
+                problem: problem || ''
             }])
             .select();
 
         if (appointmentError) {
             console.error('Error saving appointment:', appointmentError);
-            res.json({ success: false, error: 'Failed to save appointment' });
+             res.status(500).json({ success: false, error: 'Failed to save appointment' });
             return;
         }
 
-        // Prepare appointment details for email
-        const appointmentDetails = {
-            patientName: name,
-            patientEmail: email,
-            appointmentDate: date,
-            appointmentTime: time,
-            doctorName: doctorName,
-            departmentName: departmentName,
-            problem: problem
-        };
+         console.log('Appointment saved with ID:', appointmentData[0].id);
 
-        // Send confirmation email
+        // Send confirmation email (optional)
         try {
+            const appointmentDetails = {
+                patientName: name,
+                patientEmail: email,
+                appointmentDate: date,
+                appointmentTime: time,
+                doctorName: doctorName,
+                departmentName: departmentName,
+                problem: problem
+            };
+        
             const emailSent = await sendAppointmentConfirmation(appointmentDetails);
             if (!emailSent) {
                 console.warn('Failed to send confirmation email, but appointment was saved');
@@ -357,7 +344,7 @@ app.post('/submit-appointment', async (req, res) => {
         res.json({ 
             success: true, 
             appointmentId: appointmentData[0].id,
-            emailSent: true
+            message: 'Appointment booked successfully!'
         });
 
     } catch (error) {
@@ -368,23 +355,22 @@ app.post('/submit-appointment', async (req, res) => {
 
 // Page Routes - Serve HTML files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/appointment.html', (req, res) => {
-    console.log('Serving appointment.html');
-    res.sendFile(path.join(__dirname, 'appointment.html'));
+    res.sendFile(path.join(__dirname, 'public', 'appointment.html'));
 });
 
 app.get('/dentist-dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dentist-dashboard.html'));
+    res.sendFile(path.join(__dirname, 'public', 'dentist-dashboard.html'));
 });
 
 app.get('/dentist-login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dentist-login.html'));
+    res.sendFile(path.join(__dirname, 'public', 'dentist-login.html'));
 });
 
 // Start the server
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log('Static files served from: public/');
 }); 
