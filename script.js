@@ -18,11 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             console.log('Form data:', formData);
-
-            // Store the data in localStorage
-            localStorage.setItem('patientData', JSON.stringify(formData));
-            console.log('Data stored in localStorage');
-
+            
+            // Store the data temporarily in sessionStorage for the next page
+            sessionStorage.setItem('patientData', JSON.stringify(formData));
+            console.log('Data stored in sessionStorage');
+            
             // Redirect to appointment page
             console.log('Redirecting to appointment.html');
             window.location.href = 'appointment.html';
@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const appointmentForm = document.getElementById('appointmentForm');
     if (appointmentForm) {
         console.log('Appointment form found');
+        
         // Set minimum date to today
         const dateInput = document.getElementById('date');
         const today = new Date().toISOString().split('T')[0];
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dentistSelect = document.getElementById('dentist');
 
         departmentSelect.addEventListener('change', function() {
-            console.log(this.value);
+            console.log('Department selected:', this.value);
             const departmentId = this.value;
             
             // Clear current dentist options
@@ -54,7 +55,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (departmentId) {
                 // Fetch dentists for selected department
                 fetch(`/api/dentists?department=${departmentId}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(dentists => {
                         dentists.forEach(dentist => {
                             const option = document.createElement('option');
@@ -72,9 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         appointmentForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Appointment form submitted');
 
             // Get the stored patient data
-            const patientData = JSON.parse(localStorage.getItem('patientData'));
+            const patientData = JSON.parse(sessionStorage.getItem('patientData'));
             if (!patientData) {
                 alert('Please fill out patient information first!');
                 window.location.href = '/';
@@ -90,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 time: document.getElementById('time').value
             };
 
+            console.log('Complete appointment data:', appointmentData);
+
             // Send data to server
             fetch('/submit-appointment', {
                 method: 'POST',
@@ -98,16 +107,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify(appointmentData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     alert('Appointment booked successfully!');
+                    
                     // Clear stored data
-                    localStorage.removeItem('patientData');
+                    sessionStorage.removeItem('patientData');
+                    
                     // Redirect to home page
                     window.location.href = '/';
                 } else {
-                    alert('Error booking appointment. Please try again.');
+                    alert('Error booking appointment: ' + (data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
