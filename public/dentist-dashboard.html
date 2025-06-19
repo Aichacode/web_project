@@ -265,61 +265,6 @@
             loadAppointments();
         }
 
-         function rescheduleAppointment(id) {
-            const newDate = prompt('Enter new date (YYYY-MM-DD):');
-            if (!newDate) return;
-            const newTime = prompt('Enter new time (HH:MM):');
-            if (!newTime) return;
-
-            const token = localStorage.getItem('dentistToken');
-            fetch(`/api/appointments/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ date: newDate, time: newTime })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Appointment rescheduled');
-                    loadAppointments();
-                } else {
-                    alert(data.error || 'Error rescheduling appointment');
-                }
-            })
-            .catch(err => {
-                console.error('Reschedule error:', err);
-                alert('Error rescheduling appointment');
-            });
-        }
-
-        function cancelAppointment(id) {
-            if (!confirm('Are you sure you want to cancel this appointment?')) return;
-
-            const token = localStorage.getItem('dentistToken');
-            fetch(`/api/appointments/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Appointment cancelled');
-                    loadAppointments();
-                } else {
-                    alert(data.error || 'Error cancelling appointment');
-                }
-            })
-            .catch(err => {
-                console.error('Cancel error:', err);
-                alert('Error cancelling appointment');
-            });
-        }
-
         function logout() {
             localStorage.removeItem('dentistToken');
             window.location.href = '/dentist-login';
