@@ -4,7 +4,6 @@ const cors = require('cors');
 const path = require('path');
 const supabase = require('./supabase');
 const { sendAppointmentConfirmation } = require('./emailconfig');
-//const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const app = express();
@@ -79,12 +78,14 @@ app.post('/api/dentist-login', async (req, res) => {
         // In production, you should use bcrypt.compare() with hashed passwords
         if (password === dentist.password) {
             console.log('Password matched for:', dentist.username);
-            // Create JWT token
+
+            // Create JWT token with dentist role
             const token = jwt.sign(
                 { 
                     id: dentist.dentists.doctor_id,
                     username: dentist.username,
-                    name: dentist.dentists.name
+                    name: dentist.dentists.name,
+                    role: 'dentist'
                 },
                 JWT_SECRET,
                 { expiresIn: '24h' }
@@ -134,6 +135,13 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
                     name
                 )
             `);
+
+        // Restrict results based on user role
+        if (req.user.role === 'dentist') {
+            query = query.eq('doctor_id', req.user.id);
+        } else if (req.user.role !== 'frontdesk') {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
 
         // Add department filter
         if (department) {
