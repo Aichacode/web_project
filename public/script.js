@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        departmentSelect.addEventListener('change', function() {␊
-            console.log('Department selected:', this.value);␊
-            const departmentId = this.value;␊
+        departmentSelect.addEventListener('change', function() {
+            console.log('Department selected:', this.value);
+            const departmentId = this.value;
             
             // Clear current dentist options
             dentistSelect.innerHTML = '<option value="">Choose a dentist</option>';
