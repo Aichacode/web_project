@@ -40,7 +40,7 @@ const sendAppointmentConfirmation = async (appointmentDetails) => {
 
     // Email content
     const mailOptions = {
-        from: 'your-email@gmail.com', // Replace with your Gmail address
+        from: 'ayeshadhan1@gmail.com', // Replace with your Gmail address
         to: patientEmail,
         subject: 'Dental Appointment Confirmation',
         html: `
