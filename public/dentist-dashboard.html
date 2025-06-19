@@ -147,6 +147,7 @@
                     <th>Department</th>
                     <th>Contact</th>
                     <th>Problem</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="appointmentsTableBody">
@@ -214,7 +215,7 @@
                 tableBody.innerHTML = '';
 
                 if (appointments.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="8" class="no-appointments">No appointments found</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="9" class="no-appointments">No appointments found</td></tr>';
                     return;
                 }
 
@@ -229,14 +230,18 @@
                         <td>${appointment.department_name}</td>
                         <td>${appointment.phone}<br>${appointment.email}</td>
                         <td>${appointment.problem}</td>
+                        <td>
+                            <button onclick="rescheduleAppointment(${appointment.id})">Reschedule</button>
+                            <button onclick="cancelAppointment(${appointment.id})">Cancel</button>
+                        </td
                     `;
                     tableBody.appendChild(row);
                 });
             })
             .catch(error => {
                 console.error('Error loading appointments:', error);
-                document.getElementById('appointmentsTableBody').innerHTML = 
-                    '<tr><td colspan="8" class="no-appointments">Error loading appointments</td></tr>';
+                document.getElementById('appointmentsTableBody').innerHTML =
+                    '<tr><td colspan="9" class="no-appointments">Error loading appointments</td></tr>';
             });
         }
 
@@ -258,6 +263,61 @@
             document.getElementById('dateFilter').value = '';
             document.getElementById('customDateFilter').value = '';
             loadAppointments();
+        }
+
+         function rescheduleAppointment(id) {
+            const newDate = prompt('Enter new date (YYYY-MM-DD):');
+            if (!newDate) return;
+            const newTime = prompt('Enter new time (HH:MM):');
+            if (!newTime) return;
+
+            const token = localStorage.getItem('dentistToken');
+            fetch(`/api/appointments/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ date: newDate, time: newTime })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Appointment rescheduled');
+                    loadAppointments();
+                } else {
+                    alert(data.error || 'Error rescheduling appointment');
+                }
+            })
+            .catch(err => {
+                console.error('Reschedule error:', err);
+                alert('Error rescheduling appointment');
+            });
+        }
+
+        function cancelAppointment(id) {
+            if (!confirm('Are you sure you want to cancel this appointment?')) return;
+
+            const token = localStorage.getItem('dentistToken');
+            fetch(`/api/appointments/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Appointment cancelled');
+                    loadAppointments();
+                } else {
+                    alert(data.error || 'Error cancelling appointment');
+                }
+            })
+            .catch(err => {
+                console.error('Cancel error:', err);
+                alert('Error cancelling appointment');
+            });
         }
 
         function logout() {
