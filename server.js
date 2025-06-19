@@ -55,7 +55,7 @@ app.post('/api/dentist-login', async (req, res) => {
             .from('dentist_login')
             .select(`
                 *,
-                doctors!inner(
+                dentists!inner(
                     name,
                     doctor_id
                 )
@@ -82,9 +82,9 @@ app.post('/api/dentist-login', async (req, res) => {
             // Create JWT token
             const token = jwt.sign(
                 { 
-                    id: dentist.doctors.doctor_id,
+                    id: dentist.dentists.doctor_id,
                     username: dentist.username,
-                    name: dentist.doctors.name
+                    name: dentist.dentists.name
                 },
                 JWT_SECRET,
                 { expiresIn: '24h' }
@@ -94,9 +94,9 @@ app.post('/api/dentist-login', async (req, res) => {
                 success: true,
                 token,
                 user: {
-                    id: dentist.doctors.doctor_id,
+                    id: dentist.dentists.doctor_id,
                     username: dentist.username,
-                    name: dentist.doctors.name
+                    name: dentist.dentists.name
                 }
             });
         } else {
@@ -184,7 +184,7 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
             time_slot: apt.time_slot,
             patient_name: apt.patients.name,
             department_name: apt.departments.name,
-            doctor_name: apt.doctors.name,
+            doctor_name: apt.dentists.name,
             phone: apt.patients.phone,
             email: apt.patients.email,
             problem: apt.problem
