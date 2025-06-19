@@ -3,7 +3,11 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const supabase = require('./supabase');
-const { sendAppointmentConfirmation } = require('./emailconfig');
+const {
+    sendAppointmentConfirmation,
+    sendAppointmentRescheduled,
+    sendAppointmentCancellation
+} = require('./emailconfig');
 const jwt = require('jsonwebtoken');
 
 const app = express();
