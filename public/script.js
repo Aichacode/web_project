@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Fetching dentists for department:', departmentId);
                 
                 // Fetch dentists for selected department from server
-                fetch(`/api/dentists?department=${departmentId}`)
+                fetch(`api/dentists?department=${departmentId}`)
                     .then(response => {
                         console.log('Response status:', response.status);
                         if (!response.ok) {
@@ -113,18 +113,20 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Complete appointment data:', appointmentData);
 
             // Send data to server
-            fetch('/submit-appointment', {
+            fetch('submit-appointment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(appointmentData)
             })
-            .then(response => {
+            .then(async response => {
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    const message = data.error || 'Network response was not ok';
+                    throw new Error(message);
                 }
-                return response.json();
+                return data;
             })
             .then(data => {
                 if (data.success) {
