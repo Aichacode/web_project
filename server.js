@@ -130,7 +130,7 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
                 departments!inner(
                     name
                 ),
-                doctors!inner(
+                dentists!inner(
                     name
                 )
             `);
@@ -272,7 +272,7 @@ app.post('/submit-appointment', async (req, res) => {
 
         // Get the doctor's information
         const { data: doctorData, error: doctorError } = await supabase
-            .from('doctors')
+            .from('dentists')
             .select(`
                 doctor_id,
                 name,
