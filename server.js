@@ -234,6 +234,37 @@ app.get('/api/dentists', async (req, res) => {
     }
 });
 
+// get booked slots for a dentist on a specific date
+app.get('/api/booked-slots', async (req, res) => {
+    const { doctor_id, date } = req.query;
+
+    if (!doctor_id || !date) {
+        res.status(400).json({ error: 'doctor_id and date are required' });
+        return;
+    }
+
+    try {
+        const { data: appointments, error } = await supabase
+            .from('appointments')
+            .select('time_slot')
+            .eq('doctor_id', doctor_id)
+            .eq('appointment_date', date);
+
+        if (error) {
+            console.error('Error fetching booked slots:', error);
+            res.status(500).json({ error: 'Failed to fetch booked slots' });
+            return;
+        }
+
+        const booked = appointments.map(appt => appt.time_slot);
+        res.json(booked);
+    } catch (error) {
+        console.error('Error in booked slots endpoint:', error);
+        res.status(500).json({ error: 'Failed to fetch booked slots' });
+    }
+});
+
+
 // Handle appointment submission
 app.post('/submit-appointment', async (req, res) => {
     const {
@@ -306,6 +337,25 @@ app.post('/submit-appointment', async (req, res) => {
         const doctorName = doctorData[0].name;
         const departmentName = doctorData[0].departments.name;
          console.log('Found doctor:', doctorName, 'in department:', departmentName);
+       
+        // check if the selected time slot is already booked
+        const { data: existing, error: existingError } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('doctor_id', doctorId)
+            .eq('appointment_date', date)
+            .eq('time_slot', time);
+
+        if (existingError) {
+            console.error('Error checking existing appointment:', existingError);
+            res.status(500).json({ success: false, error: 'Failed to check appointment availability' });
+            return;
+        }
+
+        if (existing && existing.length > 0) {
+            res.status(409).json({ success: false, error: 'Selected time slot is already booked' });
+            return;
+        }
 
         // insert the appointment
         const { data: appointmentData, error: appointmentError } = await supabase
