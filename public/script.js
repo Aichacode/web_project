@@ -44,10 +44,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listener for department change
         const departmentSelect = document.getElementById('department');
         const dentistSelect = document.getElementById('dentist');
+        const timeSelect = document.getElementById('time');
 
-        departmentSelect.addEventListener('change', function() {
-            console.log('Department selected:', this.value);
-            const departmentId = this.value;
+        async function updateTimeOptions() {
+            const doctorId = dentistSelect.value;
+            const selectedDate = dateInput.value;
+            if (!doctorId || !selectedDate) return;
+
+            try {
+                const response = await fetch(`/api/booked-slots?doctor_id=${doctorId}&date=${selectedDate}`);
+                if (!response.ok) throw new Error('Failed to load booked slots');
+                const booked = await response.json();
+
+                Array.from(timeSelect.options).forEach(option => {
+                    if (!option.value) return;
+                    if (booked.includes(option.value)) {
+                        option.disabled = true;
+                        option.style.display = 'none';
+                    } else {
+                        option.disabled = false;
+                        option.style.display = '';
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching booked slots:', error);
+            }
+        }
+
+        departmentSelect.addEventListener('change', function() {␊
+            console.log('Department selected:', this.value);␊
+            const departmentId = this.value;␊
             
             // Clear current dentist options
             dentistSelect.innerHTML = '<option value="">Choose a dentist</option>';
@@ -88,6 +114,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('No department selected, clearing dentist options');
             }
         });
+
+        dateInput.addEventListener('change', updateTimeOptions);
+        dentistSelect.addEventListener('change', updateTimeOptions);
 
         appointmentForm.addEventListener('submit', function(e) {
             e.preventDefault();
