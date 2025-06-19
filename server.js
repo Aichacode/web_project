@@ -264,6 +264,102 @@ app.get('/api/booked-slots', async (req, res) => {
     }
 });
 
+// reschedule an appointment
+app.put('/api/appointments/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const { date, time } = req.body;
+
+    if (!date || !time) {
+        return res.status(400).json({ success: false, error: 'date and time are required' });
+    }
+
+    try {
+        const { data: appointment, error: fetchError } = await supabase
+            .from('appointments')
+            .select('id, doctor_id')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !appointment) {
+            console.error('Error fetching appointment:', fetchError);
+            return res.status(404).json({ success: false, error: 'Appointment not found' });
+        }
+
+        if (req.user.role === 'dentist' && appointment.doctor_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: 'Forbidden' });
+        }
+
+        // check if new slot already booked for this doctor
+        const { data: existing, error: existingError } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('doctor_id', appointment.doctor_id)
+            .eq('appointment_date', date)
+            .eq('time_slot', time)
+            .neq('id', id);
+
+        if (existingError) {
+            console.error('Error checking existing appointment:', existingError);
+            return res.status(500).json({ success: false, error: 'Failed to check availability' });
+        }
+
+        if (existing && existing.length > 0) {
+            return res.status(409).json({ success: false, error: 'Selected time slot is already booked' });
+        }
+
+        const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ appointment_date: date, time_slot: time })
+            .eq('id', id);
+
+        if (updateError) {
+            console.error('Error updating appointment:', updateError);
+            return res.status(500).json({ success: false, error: 'Failed to reschedule appointment' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error in reschedule endpoint:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// cancel an appointment
+app.delete('/api/appointments/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { data: appointment, error: fetchError } = await supabase
+            .from('appointments')
+            .select('id, doctor_id')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !appointment) {
+            console.error('Error fetching appointment:', fetchError);
+            return res.status(404).json({ success: false, error: 'Appointment not found' });
+        }
+
+        if (req.user.role === 'dentist' && appointment.doctor_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: 'Forbidden' });
+        }
+
+        const { error: deleteError } = await supabase
+            .from('appointments')
+            .delete()
+            .eq('id', id);
+
+        if (deleteError) {
+            console.error('Error deleting appointment:', deleteError);
+            return res.status(500).json({ success: false, error: 'Failed to cancel appointment' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error in cancel endpoint:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
 
 // Handle appointment submission
 app.post('/submit-appointment', async (req, res) => {
