@@ -10,7 +10,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Secret key for JWT - in production, use environment variable
-const JWT_SECRET = process.env.JWT_SECRET || 'wy4Wy3RnuIy1BOQetL8Gty4WO7yAA3XYV3DWmA4GJyvtQFzJoCGdjZCCG2y7HMXQwSAhIzRxYMR7aWduc3IbIQ==';
+const JWT_SECRET = process.env.JWT_SECRET || ''; //write the jwt secret key
 
 // Middleware
 app.use(cors());
